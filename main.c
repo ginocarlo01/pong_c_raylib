@@ -1,105 +1,209 @@
 #include "raylib.h"
-#include <stdio.h> 
+#include <stdio.h>
+#include <math.h>
+
+void normalize(Vector2 *v) {
+    float mag = sqrtf(v->x * v->x + v->y * v->y);
+    if (mag != 0.0f) {
+        v->x /= mag;
+        v->y /= mag;
+    }
+}
+
+/*==============================================================================
+    STRUCTS
+==============================================================================*/
 
 typedef struct Ball {
     float radius;
     Color color;
-    float pos_x;
-    float pos_y;
-    float speed_x;
-    float speed_y;
+    float acceleration;
+    Vector2 init_position;
+    Vector2 position;
+    Vector2 direction;
+    float base_speed;
+    float current_speed;
 } Ball;
-
-void draw_ball(Ball ball) {
-    DrawCircle(ball.pos_x, ball.pos_y, ball.radius, ball.color);
-}
-
-void update_ball(Ball *ball) {
-    float delta_time = GetFrameTime();
-    ball->pos_x += ball->speed_x * delta_time;
-    
-    ball->pos_y += ball->speed_y * delta_time;
-    
-    if(ball->pos_y + ball->radius >= GetScreenHeight() || ball->pos_y - ball->radius <= 0){
-        ball->speed_y *= -1;
-    }
-    
-}
 
 typedef struct Paddle {
     float width;
     float height;
     Color color;
-    float pos_x;
-    float pos_y;
-    float speed_x;
-    float speed_y;
+    Vector2 init_position;
+    Vector2 position;
+    Vector2 direction;
+    float speed;
 } Paddle;
 
+/*==============================================================================
+    BALL FUNCTIONS
+==============================================================================*/
+
+Ball create_ball(float pos_x, float pos_y, float radius, Color color, float speed, float acceleration) {
+    Ball ball;
+
+    ball.radius = radius;
+    ball.color = color;
+    ball.init_position = (Vector2){pos_x, pos_y};
+    ball.position = ball.init_position;
+    ball.base_speed = speed;
+    ball.current_speed = speed;
+    ball.direction = (Vector2){1.0f, 1.0f};
+    ball.acceleration = acceleration;
+
+    normalize(&ball.direction);
+
+    return ball;
+}
+
+void reset_ball(Ball *ball) {
+    ball->position = ball->init_position;
+    ball->current_speed = ball->base_speed;
+    ball->direction.x *= -1;  
+    normalize(&ball->direction);
+}
+
+void update_ball(Ball *ball, int *player_score, int *cpu_score) {
+    float delta = GetFrameTime();
+
+    ball->position.x += ball->current_speed * ball->direction.x * delta;
+    ball->position.y += ball->current_speed * ball->direction.y * delta;
+
+    if (ball->position.y + ball->radius >= GetScreenHeight() ||
+        ball->position.y - ball->radius <= 0) {
+        ball->direction.y *= -1;
+    }
+
+    if (ball->position.x + ball->radius >= GetScreenWidth()) {
+        (*player_score)++;
+        reset_ball(ball);
+    }
+
+    else if (ball->position.x - ball->radius <= 0) {
+        (*cpu_score)++;
+        reset_ball(ball);
+    }
+}
+
+void draw_ball(Ball ball) {
+    DrawCircleV(ball.position, ball.radius, ball.color);
+}
+
+void ball_handle_collision(Ball *ball, Paddle paddle) {
+    Rectangle paddle_rect = (Rectangle){
+        paddle.position.x,
+        paddle.position.y,
+        paddle.width,
+        paddle.height
+    };
+
+    if (CheckCollisionCircleRec(ball->position, ball->radius, paddle_rect)) {
+        ball->direction.x *= -1;
+
+        float paddle_center_y = paddle.position.y + paddle.height / 2.0f;
+        float hit_offset = (ball->position.y - paddle_center_y) / (paddle.height / 2.0f);
+
+        ball->direction.y = hit_offset;
+        ball->current_speed += ball->acceleration;
+
+        normalize(&ball->direction);
+    }
+}
+
+/*==============================================================================
+    PADDLE FUNCTIONS
+==============================================================================*/
+
+Paddle create_paddle(float pos_x, float pos_y, float width, float height, Color color, float speed) {
+    Paddle paddle;
+
+    paddle.width = width;
+    paddle.height = height;
+    paddle.color = color;
+    paddle.init_position = (Vector2){pos_x, pos_y};
+    paddle.position = paddle.init_position;
+    paddle.speed = speed;
+    paddle.direction = (Vector2){0.0f, 0.0f};
+
+    return paddle;
+}
+
+Rectangle paddle_get_rect(Paddle paddle) {
+    return (Rectangle){ paddle.position.x, paddle.position.y, paddle.width, paddle.height };
+}
+
 void draw_paddle(Paddle paddle) {
-    DrawRectangle(paddle.pos_x, paddle.pos_y, paddle.width, paddle.height, paddle.color);
+    DrawRectangleRec(paddle_get_rect(paddle), paddle.color);
 }
 
 void update_paddle(Paddle *paddle) {
-    float delta_time = GetFrameTime();
-    paddle->pos_x += paddle->speed_x * delta_time;
-    
-    paddle->pos_y += paddle->speed_y * delta_time;
-    
-    if(paddle->pos_y + paddle->height/2 >= GetScreenHeight()){
-        paddle->pos_y = GetScreenHeight() - paddle->height/2;
-    }
-    if(paddle->pos_y - paddle->height/2 <= 0){
-        paddle->pos_y = paddle->height/2;
-    }
-    
+    float delta = GetFrameTime();
+
+    paddle->position.y += paddle->speed * paddle->direction.y * delta;
+
+    if (paddle->position.y + paddle->height >= GetScreenHeight())
+        paddle->position.y = GetScreenHeight() - paddle->height;
+    if (paddle->position.y <= 0)
+        paddle->position.y = 0;
 }
 
-int main(void){
-    printf("Hello World");
-    
-    const int window_width = 1920 / 2;
-    const int window_height = 1080 / 2;
-    const char game_title[] = "game title";
-    
+void update_cpu_paddle(Paddle *paddle, float ball_pos_y) {
+    float center_y = paddle->position.y + paddle->height / 2.0f;
+
+    if (center_y > ball_pos_y)
+        paddle->direction.y = -1;
+    else
+        paddle->direction.y = 1;
+
+    update_paddle(paddle);
+}
+
+/*==============================================================================
+    MAIN
+==============================================================================*/
+
+int main(void) {
+    const int window_width = 960;
+    const int window_height = 540;
+    const char game_title[] = "Pong Clone (Single File, Organized)";
+
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_UNDECORATED);
     InitWindow(window_width, window_height, game_title);
-    
+
     SetTargetFPS(240);
     DisableCursor();
-    SetConfigFlags( FLAG_MSAA_4X_HINT | FLAG_WINDOW_UNDECORATED );
-    
-    Ball ball = {
-        .radius = 20,
-        .pos_x = window_width / 2,
-        .pos_y = window_height / 2,
-        .speed_x = 100,
-        .speed_y = 100,
-        .color = RAYWHITE
-    };
-    
-    Paddle paddle = {
-        .height = 120,
-        .width = 20,
-        .pos_x = 10,
-        .pos_y = window_height / 2 - 60,
-        .speed_x = 0,
-        .speed_y = 100,
-        .color = RAYWHITE
-    };
-    
-    while ( !WindowShouldClose() ) { 
-        
-        
-        update_ball(&ball);
-        
+
+    Ball ball = create_ball(window_width / 2, window_height / 2, 20, WHITE, 400, 40);
+    Paddle player = create_paddle(10, window_height / 2 - 60, 20, 120, RAYWHITE, 400);
+    Paddle cpu = create_paddle(window_width - 30, window_height / 2 - 60, 20, 120, RAYWHITE, 400);
+
+    int player_score = 0;
+    int cpu_score = 0;
+
+    while (!WindowShouldClose()) {
+        // === INPUT ===
+        if (IsKeyDown(KEY_UP)) player.direction.y = -1;
+        else if (IsKeyDown(KEY_DOWN)) player.direction.y = 1;
+        else player.direction.y = 0;
+
+        // === LOGIC ===
+        update_paddle(&player);
+        update_cpu_paddle(&cpu, ball.position.y);
+        update_ball(&ball, &player_score, &cpu_score);
+        ball_handle_collision(&ball, player);
+        ball_handle_collision(&ball, cpu);
+
+        // === RENDER ===
         BeginDrawing();
         ClearBackground(BLACK);
-        
+
         draw_ball(ball);
-        draw_paddle(paddle);
-        //DrawCircle(window_width / 2, window_height / 2, 20, RAYWHITE);
-        //DrawRectangle(10, window_height/2 - 60, 20, 120, RAYWHITE);
-        
+        draw_paddle(player);
+        draw_paddle(cpu);
+
+        DrawText(TextFormat("%d", player_score), window_width / 4, 20, 40, RAYWHITE);
+        DrawText(TextFormat("%d", cpu_score), window_width * 3 / 4, 20, 40, RAYWHITE);
+
         EndDrawing();
     }
 

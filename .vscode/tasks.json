@@ -81,7 +81,7 @@
             }
         },
         {
-            "label": "build and run",
+            "label": "build",
             "type": "shell",
             "command": "mingw32-make.exe",
             "args": [
@@ -90,32 +90,53 @@
                 "OBJS=${fileBasenameNoExtension}.c",
                 "BUILD_MODE=DEBUG"
             ],
+            "problemMatcher": ["$gcc"],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": ["$gcc"],
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": true,
                 "panel": "shared",
                 "clear": true
-            },
-            "dependsOn": ["run exe"]
+            }
         },
         {
             "label": "run exe",
             "type": "shell",
             "command": "${workspaceFolder}/${fileBasenameNoExtension}.exe",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": true,
                 "panel": "shared",
                 "clear": false
+            },
+            "dependsOn": ["build"]
+        },
+        {
+        "label": "build and run",
+        "dependsOn": ["build", "run exe"],
+        "dependsOrder": "sequence",
+        "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "clear": true
             }
         }
+
     
     ]
 }
