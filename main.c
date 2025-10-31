@@ -10,6 +10,7 @@ void normalize(Vector2 *v) {
     }
 }
 
+
 /*==============================================================================
     STRUCTS
 ==============================================================================*/
@@ -72,43 +73,49 @@ void update_ball(Ball *ball, int *player_score, int *cpu_score) {
     if (ball->position.y + ball->radius >= GetScreenHeight() ||
         ball->position.y - ball->radius <= 0) {
         ball->direction.y *= -1;
+        play_ball_hit(); // toca som ao bater na parede
     }
 
     if (ball->position.x + ball->radius >= GetScreenWidth()) {
         (*player_score)++;
+        play_win();      // toca som de vitória
         reset_ball(ball);
     }
-
     else if (ball->position.x - ball->radius <= 0) {
         (*cpu_score)++;
+        play_lose();     // toca som de derrota
         reset_ball(ball);
     }
 }
 
-void draw_ball(Ball ball) {
-    DrawCircleV(ball.position, ball.radius, ball.color);
+
+void draw_ball(const Ball *ball) {
+    DrawCircleV(ball->position, ball->radius, ball->color);
 }
 
-void ball_handle_collision(Ball *ball, Paddle paddle) {
+void ball_handle_collision(Ball *ball, const Paddle *paddle) {
     Rectangle paddle_rect = (Rectangle){
-        paddle.position.x,
-        paddle.position.y,
-        paddle.width,
-        paddle.height
+        paddle->position.x,
+        paddle->position.y,
+        paddle->width,
+        paddle->height
     };
 
     if (CheckCollisionCircleRec(ball->position, ball->radius, paddle_rect)) {
         ball->direction.x *= -1;
 
-        float paddle_center_y = paddle.position.y + paddle.height / 2.0f;
-        float hit_offset = (ball->position.y - paddle_center_y) / (paddle.height / 2.0f);
+        float paddle_center_y = paddle->position.y + paddle->height / 2.0f;
+        float hit_offset = (ball->position.y - paddle_center_y) / (paddle->height / 2.0f);
 
         ball->direction.y = hit_offset;
         ball->current_speed += ball->acceleration;
 
         normalize(&ball->direction);
+
+        play_ball_hit();
     }
 }
+
 
 /*==============================================================================
     PADDLE FUNCTIONS
@@ -128,13 +135,19 @@ Paddle create_paddle(float pos_x, float pos_y, float width, float height, Color 
     return paddle;
 }
 
-Rectangle paddle_get_rect(Paddle paddle) {
-    return (Rectangle){ paddle.position.x, paddle.position.y, paddle.width, paddle.height };
+Rectangle paddle_get_rect(const Paddle *paddle) {
+    return (Rectangle){
+        paddle->position.x,
+        paddle->position.y,
+        paddle->width,
+        paddle->height
+    };
 }
 
-void draw_paddle(Paddle paddle) {
-    DrawRectangleRec(paddle_get_rect(paddle), paddle.color);
+void draw_paddle(const Paddle *paddle) {
+    DrawRectangleRec(paddle_get_rect(paddle), paddle->color);
 }
+
 
 void update_paddle(Paddle *paddle) {
     float delta = GetFrameTime();
@@ -159,6 +172,33 @@ void update_cpu_paddle(Paddle *paddle, float ball_pos_y) {
 }
 
 /*==============================================================================
+    SFX
+==============================================================================*/
+
+
+Sound ball_hit_sfx;
+Sound player_win_sfx;
+Sound player_lose_sfx;
+Music bg_music;
+
+void audio_init() {
+    InitAudioDevice();
+
+    ball_hit_sfx   = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\ball_hit.wav");
+    player_win_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\win.wav");
+    player_lose_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\lose.wav");
+    bg_music       = LoadMusicStream("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\bg.ogg");
+    bg_music.looping = true;
+
+    PlayMusicStream(bg_music);
+}
+
+static void play_ball_hit() { PlaySound(ball_hit_sfx); }
+static void play_win()      { PlaySound(player_win_sfx); }
+static void play_lose()     { PlaySound(player_lose_sfx); }
+
+
+/*==============================================================================
     MAIN
 ==============================================================================*/
 
@@ -169,6 +209,19 @@ int main(void) {
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_UNDECORATED);
     InitWindow(window_width, window_height, game_title);
+
+    // === SFX ===
+    audio_init();
+    // InitAudioDevice();
+
+    // Sound ball_hit_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\ball_hit.ogg");
+    // Sound player_win_sfx =  LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\win.ogg");
+    // Sound player_lose_sfx =  LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\lose.ogg");
+    // Music bg_music = LoadMusicStream("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\bg.ogg");
+    // bg_music.looping = true;  
+    // PlayMusicStream(bg_music);
+
+    // ===========
 
     SetTargetFPS(240);
     DisableCursor();
@@ -190,21 +243,24 @@ int main(void) {
         update_paddle(&player);
         update_cpu_paddle(&cpu, ball.position.y);
         update_ball(&ball, &player_score, &cpu_score);
-        ball_handle_collision(&ball, player);
-        ball_handle_collision(&ball, cpu);
+        ball_handle_collision(&ball, &player);
+        ball_handle_collision(&ball, &cpu);
 
         // === RENDER ===
         BeginDrawing();
         ClearBackground(BLACK);
 
-        draw_ball(ball);
-        draw_paddle(player);
-        draw_paddle(cpu);
+        draw_ball(&ball);
+        draw_paddle(&player);
+        draw_paddle(&cpu);
 
         DrawText(TextFormat("%d", player_score), window_width / 4, 20, 40, RAYWHITE);
         DrawText(TextFormat("%d", cpu_score), window_width * 3 / 4, 20, 40, RAYWHITE);
 
         EndDrawing();
+
+        // === SFX ===
+        UpdateMusicStream(bg_music);
     }
 
     CloseWindow();
