@@ -221,8 +221,8 @@ void update_cpu_paddle(Entity *paddle, float ball_pos_y) {
 
 int main(void) {
 
-    const int window_width = 960;
-    const int window_height = 540;
+    const int window_width = 1920;
+    const int window_height = 1080;
     const char game_title[] = "Pong Clone (Single File, Organized)";
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_UNDECORATED);
@@ -263,6 +263,7 @@ int main(void) {
 
         DrawText(TextFormat("%d", player_score), window_width / 4, 20, 40, RAYWHITE);
         DrawText(TextFormat("%d", cpu_score), window_width * 3 / 4, 20, 40, RAYWHITE);
+        DrawText(TextFormat("FPS: %d", GetFPS()), 10, 10, 20, GREEN);
 
         EndDrawing();
 
