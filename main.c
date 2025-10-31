@@ -10,6 +10,42 @@ void normalize(Vector2 *v) {
     }
 }
 
+/*==============================================================================
+    AUDIO (Corrigido)
+==============================================================================*/
+#include "raylib.h"
+
+static Sound ball_hit_sfx;
+static Sound player_win_sfx;
+static Sound player_lose_sfx;
+static Music bg_music;
+
+void audio_init() {
+    InitAudioDevice();
+
+    ball_hit_sfx   = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\ball_hit.wav");
+    player_win_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\win.wav");
+    player_lose_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\lose.wav");
+
+    bg_music = LoadMusicStream("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\bg.ogg");
+    bg_music.looping = true;
+
+    PlayMusicStream(bg_music);
+}
+
+
+void audio_unload() {
+    UnloadSound(ball_hit_sfx);
+    UnloadSound(player_win_sfx);
+    UnloadSound(player_lose_sfx);
+    UnloadMusicStream(bg_music);
+    CloseAudioDevice();
+}
+
+void play_ball_hit(void) { PlaySound(ball_hit_sfx); }
+void play_win(void)      { PlaySound(player_win_sfx); }
+void play_lose(void)     { PlaySound(player_lose_sfx); }
+
 
 /*==============================================================================
     STRUCTS
@@ -171,32 +207,6 @@ void update_cpu_paddle(Paddle *paddle, float ball_pos_y) {
     update_paddle(paddle);
 }
 
-/*==============================================================================
-    SFX
-==============================================================================*/
-
-
-Sound ball_hit_sfx;
-Sound player_win_sfx;
-Sound player_lose_sfx;
-Music bg_music;
-
-void audio_init() {
-    InitAudioDevice();
-
-    ball_hit_sfx   = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\ball_hit.wav");
-    player_win_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\win.wav");
-    player_lose_sfx = LoadSound("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\lose.wav");
-    bg_music       = LoadMusicStream("C:\\Users\\ginoc\\mycode\\pong_c_raylib\\sfx\\bg.ogg");
-    bg_music.looping = true;
-
-    PlayMusicStream(bg_music);
-}
-
-static void play_ball_hit() { PlaySound(ball_hit_sfx); }
-static void play_win()      { PlaySound(player_win_sfx); }
-static void play_lose()     { PlaySound(player_lose_sfx); }
-
 
 /*==============================================================================
     MAIN
@@ -262,7 +272,8 @@ int main(void) {
         // === SFX ===
         UpdateMusicStream(bg_music);
     }
-
+    
+    audio_unload();
     CloseWindow();
     return 0;
 }
