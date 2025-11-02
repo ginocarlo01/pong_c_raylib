@@ -24,7 +24,7 @@
             },
             "osx": {
                 "args": [
-                    "RAYLIB_PATH=<path_to_raylib>/raylib",
+                    "RAYLIB_PATH=/home/gino/Downloads/raylib",
                     "PROJECT_NAME=${fileBasenameNoExtension}",
                     "OBJS=${fileBasenameNoExtension}.c",
                     "BUILD_MODE=DEBUG"
@@ -83,13 +83,21 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "mingw32-make.exe",
+            "command": "make",
             "args": [
                 "RAYLIB_PATH=C:/raylib/raylib",
                 "PROJECT_NAME=${fileBasenameNoExtension}",
                 "OBJS=${fileBasenameNoExtension}.c",
                 "BUILD_MODE=DEBUG"
             ],
+            "osx": {
+                "args": [
+                    "RAYLIB_PATH=/home/gino/Downloads/raylib",
+                    "PROJECT_NAME=${fileBasenameNoExtension}",
+                    "OBJS=${fileBasenameNoExtension}.c",
+                    "BUILD_MODE=DEBUG"
+                ],
+            },
             "problemMatcher": ["$gcc"],
             "group": {
                 "kind": "build",
@@ -104,25 +112,28 @@
             }
         },
         {
-            "label": "run exe",
-            "type": "shell",
-            "command": "${workspaceFolder}/${fileBasenameNoExtension}.exe",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-                "clear": false
-            },
-            "dependsOn": ["build"]
+        "label": "run",
+        "type": "shell",
+        "command": "./${fileBasenameNoExtension}",
+        "windows": {
+            "command": "${workspaceFolder}/${fileBasenameNoExtension}.exe"
         },
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        },
+        "presentation": {
+            "echo": true,
+            "reveal": "always",
+            "focus": true,
+            "panel": "shared",
+            "clear": false
+        }
+        },
+
         {
         "label": "build and run",
-        "dependsOn": ["build", "run exe"],
+        "dependsOn": ["build", "run"],
         "dependsOrder": "sequence",
         "group": {
                 "kind": "build",
